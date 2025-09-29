@@ -69,7 +69,6 @@ Si encuentras un error o tienes alguna sugerencia de mejora, por favor, abre un 
 
 ## 📄 Licencia
 
-Este proyecto está bajo la Licencia **MIT**. Consulta el archivo `LICENSE` para más detalles. (Nota: Asumimos una licencia MIT por defecto para proyectos pequeños de código abierto; puedes cambiarla si lo deseas).
-
+Este proyecto está bajo la Licencia **MIT**. Consulta el archivo `LICENSE` para más detalles.
 ```
 ```
