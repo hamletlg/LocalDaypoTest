@@ -90,6 +90,7 @@ class TestController:
                             image_bytes = base64.b64decode(base64_data)
                             images_data[img_key] = image_bytes
                         except (ValueError, base64.binascii.Error):
+                            print(f"Warning: Could not decode image with key {img_key}")
 
             question_container = root.find('c')
             if question_container is None:
@@ -111,7 +112,7 @@ class TestController:
                 img_ref_node = question_node.find('b') 
                 img_ref = img_ref_node.get('p') if img_ref_node is not None else None
                 question_image_data = images_data.get(img_ref) if img_ref else None
- 
+
                 options = [opt.text.strip() if opt.text else "" for opt in question_node.findall('.//r/o')]
                 answer_code = question_node.find('c').text
 
@@ -229,15 +230,17 @@ class TestFrame(wx.Frame):
         self.main_panel.SetBackgroundColour(wx.Colour(240, 240, 240))
 
         self.answer_controls = []
+        # --- START OF CORRECTION: Sizer references for proper layout control ---
         self.content_sizer = None
         self.right_sizer = None
+        # --- END OF CORRECTION ---
 
         self.make_menu_bar()
         self.create_widgets()
         self.update_view()
         self.Center()
         self.Bind(wx.EVT_CLOSE, self.on_close)
-        
+
     def make_menu_bar(self):
         file_menu = wx.Menu()
         open_item = file_menu.Append(wx.ID_OPEN, "&Open Test...\tCtrl+O", "Open a new Daypo XML test file")
@@ -269,8 +272,6 @@ class TestFrame(wx.Frame):
 
         exhibit_box = wx.StaticBox(self.main_panel, label="Exhibit")
         self.right_sizer = wx.StaticBoxSizer(exhibit_box, wx.VERTICAL)
-        
-        self.right_sizer.SetMinSize(wx.Size(250, 200))
         
         self.image_display = wx.StaticBitmap(self.main_panel)
         self.right_sizer.Add(self.image_display, 1, wx.ALL | wx.EXPAND, 10)
@@ -313,7 +314,7 @@ class TestFrame(wx.Frame):
         root_sizer.Add(wx.StaticLine(self.main_panel), 0, wx.EXPAND | wx.ALL, 10)
         root_sizer.Add(nav_sizer, 0, wx.EXPAND | wx.ALL, 5)
         
-        self.main_panel.SetSizer(root_sizer)        
+        self.main_panel.SetSizer(root_sizer)
 
     def _bytes_to_bitmap(self, image_bytes, target_size):
         try:
@@ -338,6 +339,7 @@ class TestFrame(wx.Frame):
             return wx.Bitmap()
 
     def update_view(self):
+        # 1. PREPARACIÓN INICIAL: Limpiar el estado anterior
         self.answer_sizer.Clear(delete_windows=True)
         self.answer_controls.clear()
         self.feedback_panel.Hide()
@@ -357,28 +359,44 @@ class TestFrame(wx.Frame):
             self.main_panel.Layout()
             return
 
-
         self.SetTitle(self.controller.test.title)
         self.question_text.SetLabel(question.text)
         
-        has_image = bool(question.image_data)        
-       
+        # --- INICIO DE LA LÓGICA DE LAYOUT DEFINITIVA ---
+
+        has_image = bool(question.image_data)
+        
+        # 2. CONFIGURAR VISIBILIDAD: Decidir si el panel de la imagen debe mostrarse.
         self.content_sizer.Show(self.right_sizer, has_image)
 
+        # 3. TOMAR EL CONTROL DEL ANCHO DEL TEXTO (El paso clave)
+        # Obtenemos el ancho total del área de cliente del panel principal.
         panel_width = self.main_panel.GetClientSize().width
+        
+        # Este será el ancho al que se debe ajustar el texto.
         wrap_width = 0
         
         if has_image:
+            # LÓGICA 50/50: Si hay imagen, el texto DEBE ajustarse a la mitad del espacio.
             target_text_width = int(panel_width / 2)
-            wrap_width = target_text_width - 25
+            wrap_width = target_text_width - 25 # Restamos un poco de padding
         else:
-            wrap_width = panel_width - 25
+            # Si no hay imagen, el texto puede usar casi todo el ancho disponible.
+            wrap_width = panel_width - 25 # Restamos un poco de padding
 
+        # Aplicamos el ajuste. Esto cambia el "tamaño mínimo requerido" del widget de texto,
+        # obligándolo a ser más estrecho y alto. Solo lo hacemos si el ancho es válido.
         if wrap_width > 0:
             self.question_text.Wrap(wrap_width)
         
+        # 4. EJECUTAR EL LAYOUT
+        # Ahora que hemos reconfigurado el widget de texto, le pedimos al sizer que se recalcule.
+        # El sizer verá que el panel de texto ya no necesita todo el ancho y distribuirá
+        # el espacio sobrante al panel de la imagen, respetando la proporción 1:1.
         self.main_panel.Layout()
 
+        # 5. DIBUJAR LA IMAGEN (SOLO DESPUÉS DE QUE EL LAYOUT SEA CORRECTO)
+        # Ahora que el panel derecho tiene su tamaño final y correcto, creamos el bitmap.
         if has_image:
             container = self.right_sizer.GetStaticBox()
             available_size = container.GetClientSize()
@@ -386,6 +404,9 @@ class TestFrame(wx.Frame):
                 bitmap = self._bytes_to_bitmap(question.image_data, available_size)
                 self.image_display.SetBitmap(bitmap)
         
+        # --- FIN DE LA LÓGICA DE LAYOUT ---
+
+        # 6. CREAR CONTROLES DE RESPUESTA (esto no cambia)
         if question.type == 'ordering':
             num_options = len(question.options)
             for i, option_text in enumerate(question.options):
@@ -408,9 +429,11 @@ class TestFrame(wx.Frame):
                 self.answer_sizer.Add(control, 0, wx.ALL, 5)
                 self.answer_controls.append(control)
 
+        # 7. ACTUALIZAR UI FINAL
         self.update_feedback_and_nav(question)
+        # Una última llamada a Layout para asegurar que los nuevos controles de respuesta se dibujen bien.
         self.main_panel.Layout()
-  
+
     def update_feedback_and_nav(self, question):
         if question.is_answered:
             for control in self.answer_controls:
