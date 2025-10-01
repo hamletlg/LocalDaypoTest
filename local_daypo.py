@@ -364,7 +364,7 @@ class TestFrame(wx.Frame):
         
         self.content_sizer.Show(self.right_sizer, has_image)
 
-         panel_width = self.main_panel.GetClientSize().width
+        panel_width = self.main_panel.GetClientSize().width
         
         wrap_width = 0
         
@@ -377,9 +377,9 @@ class TestFrame(wx.Frame):
         if wrap_width > 0:
             self.question_text.Wrap(wrap_width)
         
-         self.main_panel.Layout()
+        self.main_panel.Layout()
 
-         if has_image:
+        if has_image:
             container = self.right_sizer.GetStaticBox()
             available_size = container.GetClientSize()
             if available_size.width > 0 and available_size.height > 0:
