@@ -230,10 +230,8 @@ class TestFrame(wx.Frame):
         self.main_panel.SetBackgroundColour(wx.Colour(240, 240, 240))
 
         self.answer_controls = []
-        # --- START OF CORRECTION: Sizer references for proper layout control ---
         self.content_sizer = None
         self.right_sizer = None
-        # --- END OF CORRECTION ---
 
         self.make_menu_bar()
         self.create_widgets()
@@ -362,42 +360,26 @@ class TestFrame(wx.Frame):
         self.SetTitle(self.controller.test.title)
         self.question_text.SetLabel(question.text)
         
-        # --- INICIO DE LA LÓGICA DE LAYOUT DEFINITIVA ---
-
         has_image = bool(question.image_data)
         
-        # 2. CONFIGURAR VISIBILIDAD: Decidir si el panel de la imagen debe mostrarse.
         self.content_sizer.Show(self.right_sizer, has_image)
 
-        # 3. TOMAR EL CONTROL DEL ANCHO DEL TEXTO (El paso clave)
-        # Obtenemos el ancho total del área de cliente del panel principal.
-        panel_width = self.main_panel.GetClientSize().width
+         panel_width = self.main_panel.GetClientSize().width
         
-        # Este será el ancho al que se debe ajustar el texto.
         wrap_width = 0
         
         if has_image:
-            # LÓGICA 50/50: Si hay imagen, el texto DEBE ajustarse a la mitad del espacio.
             target_text_width = int(panel_width / 2)
             wrap_width = target_text_width - 25 # Restamos un poco de padding
         else:
-            # Si no hay imagen, el texto puede usar casi todo el ancho disponible.
-            wrap_width = panel_width - 25 # Restamos un poco de padding
+            wrap_width = panel_width - 25 #
 
-        # Aplicamos el ajuste. Esto cambia el "tamaño mínimo requerido" del widget de texto,
-        # obligándolo a ser más estrecho y alto. Solo lo hacemos si el ancho es válido.
         if wrap_width > 0:
             self.question_text.Wrap(wrap_width)
         
-        # 4. EJECUTAR EL LAYOUT
-        # Ahora que hemos reconfigurado el widget de texto, le pedimos al sizer que se recalcule.
-        # El sizer verá que el panel de texto ya no necesita todo el ancho y distribuirá
-        # el espacio sobrante al panel de la imagen, respetando la proporción 1:1.
-        self.main_panel.Layout()
+         self.main_panel.Layout()
 
-        # 5. DIBUJAR LA IMAGEN (SOLO DESPUÉS DE QUE EL LAYOUT SEA CORRECTO)
-        # Ahora que el panel derecho tiene su tamaño final y correcto, creamos el bitmap.
-        if has_image:
+         if has_image:
             container = self.right_sizer.GetStaticBox()
             available_size = container.GetClientSize()
             if available_size.width > 0 and available_size.height > 0:
@@ -406,7 +388,6 @@ class TestFrame(wx.Frame):
         
         # --- FIN DE LA LÓGICA DE LAYOUT ---
 
-        # 6. CREAR CONTROLES DE RESPUESTA (esto no cambia)
         if question.type == 'ordering':
             num_options = len(question.options)
             for i, option_text in enumerate(question.options):
@@ -428,10 +409,7 @@ class TestFrame(wx.Frame):
                     control.SetValue(True)
                 self.answer_sizer.Add(control, 0, wx.ALL, 5)
                 self.answer_controls.append(control)
-
-        # 7. ACTUALIZAR UI FINAL
         self.update_feedback_and_nav(question)
-        # Una última llamada a Layout para asegurar que los nuevos controles de respuesta se dibujen bien.
         self.main_panel.Layout()
 
     def update_feedback_and_nav(self, question):
@@ -470,7 +448,11 @@ class TestFrame(wx.Frame):
 
         self.submit_button.Enable(not question.is_answered)
         self.prev_button.Enable(self.controller.test.current_question_index > 0)
-        self.next_button.Enable(self.controller.test.current_question_index < len(self.controller.test.questions) - 1)
+        is_last_question = self.controller.test.current_question_index == len(self.controller.test.questions) - 1
+        if is_last_question:
+            self.next_button.Enable(question.is_answered)
+        else:
+            self.next_button.Enable(True)
         q_num = self.controller.test.current_question_index + 1
         total_q = len(self.controller.test.questions)
         self.status_bar.SetStatusText(f"Question: {q_num} of {total_q}", 0)
